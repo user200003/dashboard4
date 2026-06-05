@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>合同回款看板 · 子类新签回款</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f8fe; padding: 16px 12px; color: #1e2f41; }
+        .dashboard { max-width: 100%; margin: 0 auto; }
+        .header h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #1E3C72, #2A5298); -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-flex; align-items: center; gap: 8px; }
+        
+        /* 总目标卡片 */
+        .overview-card { background: linear-gradient(135deg, #1a2f4e, #1e3a5f); border-radius: 28px; padding: 20px 20px; margin-bottom: 24px; color: white; }
+        .overview-title { font-size: 16px; opacity: 0.9; margin-bottom: 12px; }
+        .overview-stats { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+        .overview-item { flex: 1; min-width: 140px; }
+        .overview-label { font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
+        .overview-number { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .progress-container { flex: 2; min-width: 160px; }
+        .progress-bar-bg { background: rgba(255,255,255,0.25); border-radius: 40px; height: 8px; margin: 8px 0 6px; }
+        .progress-fill { background: #ffd966; width: 0%; height: 100%; border-radius: 40px; }
+        .completion-text { font-size: 20px; font-weight: 800; color: #ffd966; }
+        .small-note { font-size: 10px; opacity: 0.7; }
+
+        /* 独立项目块 */
+        .project-block { margin-bottom: 32px; }
+        .project-block .card { margin-bottom: 0; }
+
+        /* 卡片样式 */
+        .card { background: white; border-radius: 24px; border: 1px solid #eef2f9; overflow: hidden; margin-bottom: 0; }
+        .card-header { padding: 16px 20px 10px; border-bottom: 1px solid #eef2f8; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .project-name { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .project-name i { font-size: 20px; color: #2A5298; }
+        .badge-count { background: #f0f4fe; border-radius: 40px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #2A5298; }
+        .stats-body { padding: 16px 20px 20px; }
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eef3fc; }
+        .stat-label { font-size: 13px; color: #5e748e; font-weight: 500; }
+        .stat-number { font-size: 18px; font-weight: 700; color: #1f3a5f; }
+        .refund-approved { display: flex; justify-content: space-between; margin-top: 12px; }
+        .refund { color: #c2410c; font-weight: 600; font-size: 13px; }
+        .approved { color: #15803d; font-weight: 600; font-size: 13px; }
+
+        /* 子类明细卡片形式 - 移动端优化 */
+        .sub-detail { background: #f9fbfe; border-radius: 20px; padding: 12px 14px; margin-top: 12px; border: 1px solid #eef2f9; }
+        .sub-title { font-size: 13px; font-weight: 600; color: #2c3f5c; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .sub-card-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .sub-item-card { background: white; border-radius: 14px; padding: 8px 10px; flex: 1 1 auto; min-width: 100px; border: 1px solid #eef2f9; }
+        .sub-item-name { font-size: 12px; font-weight: 600; color: #2A5298; margin-bottom: 5px; }
+        .sub-item-stats { display: flex; justify-content: space-between; font-size: 10px; color: #1f3a5f; margin-top: 4px; }
+        .sub-item-stats span:first-child { font-weight: 500; color: #5e748e; }
+        .sub-item-stats span:last-child { font-weight: 700; }
+
+        /* 其他项目网格 */
+        .kpi-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 32px; }
+
+        /* 全局表格（移动端可横向滚动） */
+        .table-wrapper { overflow-x: auto; background: white; border-radius: 20px; border: 1px solid #eef2fa; margin-top: 16px; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f0f5fc; white-space: nowrap; }
+        th { background: #fafcff; font-weight: 600; }
+        .footer { text-align: center; margin-top: 24px; font-size: 11px; color: #7c8ba0; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+
+        @media (max-width: 480px) {
+            body { padding: 12px 8px; }
+            .overview-card { padding: 16px; }
+            .overview-number { font-size: 20px; }
+            .completion-text { font-size: 18px; }
+            .project-name { font-size: 16px; }
+            .stat-number { font-size: 16px; }
+            .stat-label { font-size: 12px; }
+            .card-header { padding: 12px 16px 8px; }
+            .stats-body { padding: 12px 16px 16px; }
+            .sub-item-card { min-width: 80px; padding: 6px 8px; }
+            .sub-item-name { font-size: 11px; }
+            .sub-item-stats { font-size: 9px; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1><i class="fas fa-chart-line"></i></h1>
+    </div>
+
+    <!-- 总目标卡片 -->
+    <div id="overviewCard" class="overview-card">
+        <div class="overview-title"><i class="fas fa-chart-pie"></i> 年度总目标追踪</div>
+        <div class="overview-stats">
+            <div class="overview-item"><div class="overview-label">🎯 年度总回款目标</div><div class="overview-number">¥ 25,000,000</div></div>
+            <div class="overview-item"><div class="overview-label">💰 至今总回款金额</div><div class="overview-number" id="totalReceivedDisplay">¥ 0</div><div class="small-note">含往年合同回款</div></div>
+            <div class="progress-container"><div class="overview-label">📈 完成进度</div><div class="progress-bar-bg"><div class="progress-fill" id="progressFill"></div></div><div><span class="completion-text" id="completionRate">0%</span></div></div>
+        </div>
+    </div>
+
+    <!-- 海外移民项目块 -->
+    <div id="overseasBlock" class="project-block"></div>
+
+    <!-- 香港投资移民块 -->
+    <div id="hkInvestmentBlock" class="project-block"></div>
+
+    <!-- 其他项目网格 -->
+    <div id="cardsContainer" class="kpi-grid"></div>
+
+    <!-- 分项目明细表 -->
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>项目类型</th>
+                    <th>当年签约单数</th>
+                    <th>当年签约金额(元)</th>
+                    <th>总回款金额(元)</th>
+                    <th>往年合同回款(元)</th>
+                    <th>退款金额(元)</th>
+                    <th>退单数</th>
+                    <th>获批数</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <div class="footer">数据来源：1-6月合同回款明细表（最新） · 子类明细仅包含新签合同及其回款金额</div>
+</div>
+
+<script>
+    function evaluateFormula(val) {
+        if (val === undefined || val === null) return 0;
+        if (typeof val !== 'string') return val;
+        let str = val.trim();
+        if (str.startsWith('=')) {
+            str = str.substring(1);
+            try {
+                let parts = str.split('+');
+                let sum = 0;
+                for (let p of parts) {
+                    let num = parseFloat(p);
+                    if (isNaN(num)) return val;
+                    sum += num;
+                }
+                return sum;
+            } catch(e) { return val; }
+        }
+        return parseFloat(val);
+    }
+
+    // 原始数据（共195行，与最新Excel一致）
+    const rawRows = [
+        ["香港进修移民","硕士常规",38000,38000,"已获批","","SO.20260104001","2026-01-02",""],
+        ["海外移民项目","美国EB-1A","",100000,"已获批","是","SO.20250220004","2026-01-03",""],
+        ["香港投资移民","投资移民",198000,198000,"已获批","","SO.20260105002","2026-01-04",""],
+        ["香港企业服务","股份转让",1590,1590,"已获批","","SO.20250905007","2026-01-05",""],
+        ["香港专才移民","专才",80000,80000,"执行中","","SO.20260117003","2026-01-07",""],
+        ["香港投资移民","投资移民",190000,190000,"已获批","","SO.20260109002","2026-01-07",""],
+        ["香港企业服务","注册+开户",20800,20800,"执行中","","SO.20260525007","2026-01-08",""],
+        ["香港企业服务","香港企业服务",19800,19800,"已获批","","SO.20260113003","2026-01-08",""],
+        ["香港投资移民","投资移民",183000,183000,"已获批","","SO.20260112002","2026-01-12",""],
+        ["香港企业服务","注册+开户",20800,20800,"已获批","","SO.20260113002","2026-01-12",""],
+        ["香港签证项目","香港永居",20000,20000,"执行中","","SO.20260114001","2026-01-12",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260401003","2026-01-15",""],
+        ["香港企业服务","年审",7000,7000,"已获批","","SO.20250826003-01","2026-01-15",""],
+        ["香港企业服务","变更香港地址",800,800,"已获批","","SO.20260117004","2026-01-15",""],
+        ["香港签证项目","高才签证续签",10000,10000,"已获批","","SO.20260119001","2026-01-16",""],
+        ["海外移民项目","圣基茨",180893,180893,"执行中","","SO.20260116002","2026-01-16",""],
+        ["香港进修移民","专升本",70000,50000,"已退款","","SO.20260129003","2026-01-16","50000"],
+        ["香港进修移民","硕士常规",38000,38000,"已获批","","SO.20260120001","2026-01-20",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260120002","2026-01-20",""],
+        ["香港进修移民","硕士保录",100000,100000,"执行中","","SO.20260127003","2026-01-23",""],
+        ["香港进修移民","专升本",85000,85000,"已退款","","SO.20260126004","2026-01-23","42500"],
+        ["香港优才移民","优才",36000,36000,"执行中","","SO.20260126003","2026-01-23",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260126002","2026-01-23",""],
+        ["香港进修移民","硕士常规",34048,34048,"已获批","","SO.20260129002","2026-01-22",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260126005","2026-01-20",""],
+        ["香港高才移民","高才A",16000,16000,"已获批","","SO.20260127004","2026-01-21",""],
+        ["香港高才移民","高才A",16000,16000,"已获批","","SO.20260127005","2026-01-21",""],
+        ["香港签证项目","受养人办理",5000,5000,"已获批","","SO.20260202004","2026-01-29",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260126001","2026-01-21",""],
+        ["香港企业服务","注册+开户","",14200,"已获批","是","SO.20250326001","2026-01-16",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260127002","2026-01-27",""],
+        ["香港投资移民","投资移民",168000,168000,"执行中","","SO.20260127008","2026-01-27",""],
+        ["香港进修移民","硕士常规",38000,38000,"已获批","","SO.20260127009","2026-01-27",""],
+        ["香港企业服务","强积金",4000,4000,"已获批","","SO.20251126001","2026-01-27",""],
+        ["香港投资移民","马税",20000,20000,"已获批","","SO.20260202003","2026-01-28",""],
+        ["香港企业服务","转股",3500,3500,"已获批","","SO.20251216005","2026-01-29",""],
+        ["香港投资移民","投资移民",158000,158000,"执行中","","SO.20260202002","2026-01-29",""],
+        ["香港高才移民","高才A",26000,26000,"执行中","","SO.20260130003","2026-01-29",""],
+        ["海外移民项目","葡萄牙","=44630+183478",44630,"执行中","","SO.20260211009","2026-01-30",""],
+        ["香港投资移民","投资移民",168000,168000,"执行中","","SO.20260204002","2026-01-30",""],
+        ["香港高才移民","高才B",8000,8000,"已获批","","SO.20260313003","2026-02-02",""],
+        ["香港企业服务","企业服务",800,800,"已获批","","SO.20251224002","2026-02-03",""],
+        ["香港企业服务","做账审计",21600,21600,"已获批","","SO.20260204001","2026-02-03",""],
+        ["香港企业服务","BVI+开曼+注册公司",54600,27300,"执行中","","SO.20230714001","2026-02-04",""],
+        ["香港签证项目","香港永居",20000,20000,"执行中","","SO.20260205002","2026-02-05",""],
+        ["香港高才移民","高才A",30000,30000,"已获批","","SO.20231116001","2026-02-05",""],
+        ["海外移民项目","圣基茨",539322,17810,"执行中","","SO.20260205001","2026-02-05",""],
+        ["香港投资移民","投资移民",178000,89000,"执行中","","SO.20260206001","2026-02-06",""],
+        ["香港高才移民","高才B",16000,16000,"已获批","","SO.20260206004","2026-02-06",""],
+        ["香港投资移民","投资移民",198000,198000,"执行中","","SO.20260206003","2026-02-06",""],
+        ["香港进修移民","硕士保录",100000,50000,"已获批","","SO.20241106001","2026-02-06",""],
+        ["香港企业服务","银行开户",12000,12000,"已获批","","SO.20260306001","2026-02-09",""],
+        ["海外移民项目","葡萄牙基金","",30000,"执行中","是","SO.20250808002","2026-02-10",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260210002","2026-02-10",""],
+        ["海外移民项目","土耳其",591900,26715,"执行中","","SO.20260211012","2026-02-11",""],
+        ["海外移民项目","瓦努阿图移民","",556280,"已获批","是","SO.20251208006","2026-02-11",""],
+        ["香港企业服务","企业服务","",1995,"已获批","","SO.20260313001","2026-02-12",""],
+        ["香港进修移民","硕士保录","",40000,"已获批","是","SO.20250730001","2026-02-25",""],
+        ["香港进修移民","硕士常规",38000,38000,"已获批","","SO.20260225002","2026-02-25",""],
+        ["香港企业服务","企业服务年审",6300,6300,"已获批","","SO.20260226003","2026-02-26",""],
+        ["香港签证项目","高才签证续签",10000,10000,"已获批","","SO.20251028009","2026-02-26",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260306002","2026-02-27",""],
+        ["香港企业服务","开对公账户",12000,12000,"执行中","","SO.20260303002","2026-03-03",""],
+        ["香港签证项目","高才签证续签",15000,15000,"执行中","","SO.20260305001","2026-03-04",""],
+        ["香港高才移民","高才B",16000,16000,"已获批","","SO.20260311002","2026-03-10",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260311001","2026-03-10",""],
+        ["香港进修移民","硕士常规",38000,38000,"已获批","","SO.20260312003","2026-03-11",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260312002","2026-03-12",""],
+        ["香港企业服务","年审报税",10000,10000,"已获批","","SO.20250826003-02","2026-03-12",""],
+        ["香港投资移民","投资移民",198000,198000,"执行中","","SO.20260316001","2026-03-12",""],
+        ["香港进修移民","硕士保录",100000,100000,"已获批","","SO.20260313004","2026-03-13",""],
+        ["香港企业服务","BUD",10000,10000,"已获批","","SO.20260319003","2026-03-17",""],
+        ["香港投资移民","投资移民",168000,168000,"执行中","","SO.20260318001","2026-03-18",""],
+        ["香港签证项目","高才签证续签",10000,10000,"执行中","","SO.20260318002","2026-03-18",""],
+        ["香港企业服务","BVI公司注册",25000,25000,"已获批","","SO.20260320001","2026-03-18",""],
+        ["香港签证项目","高才签证续签",10000,10000,"执行中","","SO.20260319004","2026-03-18",""],
+        ["香港企业服务","年审+强积金+做账",13100,13100,"已获批","","SO.20260320002","2026-03-19",""],
+        ["香港进修移民","硕士常规",38000,38000,"已获批","","SO.20260320003","2026-03-19",""],
+        ["香港高才移民","高才A",30000,30000,"执行中","","SO.20260320006","2026-03-19",""],
+        ["香港企业服务","年审",6300,6300,"已获批","","SO.20260320008","2026-03-20",""],
+        ["香港投资移民","投资移民","",100000,"已获批","是","SO.20250411002","2026-03-20",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260324003","2026-03-20",""],
+        ["香港投资移民","投资移民",138000,41400,"已获批","","SO.20260429002","2026-03-23",""],
+        ["香港企业服务","做账+审计",6300,6300,"已获批","","SO.20260324002","2026-03-24",""],
+        ["香港企业服务","企业服务",5000,5000,"已获批","","SO.20260401002","2026-03-24",""],
+        ["香港投资移民","投资移民",198000,198000,"执行中","","SO.20260325004","2026-03-25",""],
+        ["香港投资移民","投资移民",168000,168000,"执行中","","SO.20260324001","2026-03-24",""],
+        ["香港投资移民","投资移民",151000,151000,"执行中","","SO.20260325002","2026-03-24",""],
+        ["香港企业服务","注册+开户",18720,18720,"已获批","","SO.20260325005","2026-03-25",""],
+        ["香港企业服务","开户",10800,10800,"已获批","","SO.20260327001","2026-03-26",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260401007","2026-03-26",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260331001","2026-03-27",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260327002","2026-03-27",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260401001","2026-03-30",""],
+        ["香港高才移民","高才A",16000,8800,"执行中","","SO.20260331002","2026-03-30",""],
+        ["香港投资移民","投资移民",168000,168000,"执行中","","SO.20260330002","2026-03-30",""],
+        ["香港进修移民","硕士保录","",50000,"已获批","是","SO.20250904003","2026-03-31",""],
+        ["香港高才移民","高才C","",7200,"执行中","","SO.20260331002","2026-04-01",""],
+        ["香港专才移民","专才",60000,60000,"执行中","","SO.20260421002","2026-04-01",""],
+        ["香港高才移民","高才B",16000,16000,"执行中","","SO.20260413002","2026-04-01",""],
+        ["香港高才移民","高才A",36000,36000,"已获批","","SO.20260401006","2026-04-01",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260402003","2026-04-02",""],
+        ["香港投资移民","投资移民","",134000,"执行中","是","SO.20251218009","2026-04-02",""],
+        ["香港高才移民","高才A",16000,16000,"执行中","","SO.20260403001","2026-04-02",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260415003","2026-04-03",""],
+        ["香港企业服务","年审",6300,6300,"已获批","","SO.20250516004","2026-04-03",""],
+        ["香港投资移民","投资移民",238000,238000,"执行中","","SO.20260408005","2026-04-07",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260409001","2026-04-07",""],
+        ["香港进修移民","硕士保录",150000,150000,"执行中","","SO.20260409003","2026-04-09",""],
+        ["香港企业服务","年审+做账审计+薪俸税+强积金+做账审计",23888,23888,"执行中","","SO.20260408003","2026-04-07",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260408002","2026-04-08",""],
+        ["香港企业服务","改地址",800,800,"已获批","","SO.20260409005","2026-04-09",""],
+        ["香港企业服务","注册",8800,8800,"已获批","","SO.20260414004","2026-04-10",""],
+        ["香港投资移民","投资移民",168000,100000,"执行中","","SO.20260413001","2026-04-10",""],
+        ["香港投资移民","几内亚比绍",50000,50000,"已获批","","SO.20260410004","2026-04-10",""],
+        ["香港投资移民","投资移民",198000,198000,"执行中","","SO.20260416004","2026-04-13",""],
+        ["香港企业服务","注册",8800,8800,"已退款","","SO.20260414002","2026-04-13","8800"],
+        ["香港高才移民","高才B",16000,16000,"执行中","","SO.20260415001","2026-04-14",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260416005","2026-04-15",""],
+        ["香港签证项目","高才签证续签",10000,10000,"执行中","","SO.20260416002","2026-04-15",""],
+        ["香港优才移民","优才",36000,36000,"执行中","","SO.20260423001","2026-04-17",""],
+        ["香港进修移民","硕士保录","",50000,"已获批","是","SO.20241106001","2026-04-17",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260421001","2026-04-20",""],
+        ["香港投资移民","投资移民",238000,119000,"执行中","","SO.20260423004","2026-04-22",""],
+        ["香港高才移民","高才B",16000,16000,"执行中","","SO.20260423002","2026-04-22",""],
+        ["香港企业服务","做账审计",21000,21000,"已获批","","SO.20260525003","2026-04-23",""],
+        ["香港高才移民","高才B",16000,16000,"执行中","","SO.20260428004","2026-04-24",""],
+        ["香港专才移民","专才",60000,60000,"执行中","","S20230204","2026-04-27",""],
+        ["香港进修移民","硕士保录","",30000,"已获批","是","SO.20251222004","2026-04-27",""],
+        ["香港进修移民","硕士保录",140000,140000,"执行中","","SO.20260429003","2026-04-27",""],
+        ["香港投资移民","投资移民",183000,183000,"执行中","","SO.20260427001","2026-04-27",""],
+        ["海外移民项目","土耳其",615373,30310,"执行中","","SO.20260507006","2026-04-28",""],
+        ["香港进修移民","硕士保录",150000,150000,"执行中","","SO.20260429004","2026-04-27",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260428001","2026-04-28",""],
+        ["香港企业服务","年审",6300,6300,"已获批","","SO.20260429006","2026-04-28",""],
+        ["香港企业服务","注册",8800,8800,"已获批","","SO.20260511002","2026-04-28",""],
+        ["香港进修移民","硕士常规",38000,38000,"已退款","","SO.20260507005","2026-04-30","33000"],
+        ["香港企业服务","做账审计",2800,2800,"已获批","","SO.20260529003","2026-04-30",""],
+        ["香港投资移民","投资移民","",96000,"已获批","","SO.20260429002","2026-04-30",""],
+        ["海外移民项目","土耳其","",165194,"执行中","","SO.20260507006","2026-05-01",""],
+        ["香港高才移民","高才A",31000,31000,"执行中","","SO.20260507002","2026-05-06",""],
+        ["香港专才移民","专才",40000,40000,"执行中","","SO.20260507003","2026-05-06",""],
+        ["香港企业服务","注册+开户",19800,19800,"执行中","","SO.20260526001","2026-05-08",""],
+        ["香港企业服务","变更经营范围",500,500,"已获批","","SO.20260509007","2026-05-08",""],
+        ["香港企业服务","年审+无运营做账审计",7950,7950,"已获批","","SO.20260509008","2026-05-09",""],
+        ["香港企业服务","审计无运营审计报告",2800,2800,"已获批","","SO.20260511001","2026-05-09",""],
+        ["香港签证项目","续签",9000,9000,"已获批","","SO.20260509006","2026-05-09",""],
+        ["香港进修移民","硕士常规",30000,30000,"执行中","","#N/A","2026-05-10",""],
+        ["香港企业服务","注册",8800,8800,"已获批","","SO.20260513001","2026-05-12",""],
+        ["香港投资移民","投资移民",163000,163000,"执行中","","SO.20260513002","2026-05-12",""],
+        ["香港签证项目","永居",25000,25000,"执行中","","SO.20260514004","2026-05-13",""],
+        ["香港进修移民","硕士保录",100000,100000,"执行中","","SO.20260514002","2026-05-13",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260601001","2026-05-18",""],
+        ["香港高才移民","高才A",40000,40000,"执行中","","SO.20260521007","2026-05-18",""],
+        ["香港投资移民","投资移民","",46324,"执行中","是","SO.20251211001","2026-05-18",""],
+        ["香港签证项目","高才续签",10000,10000,"执行中","","SO.20260521006","2026-05-18",""],
+        ["海外移民项目","瓦努阿图",972206,"=17406+272800","执行中","","SO.20260520001","2026-05-19",""],
+        ["香港企业服务","强积金",4000,4000,"执行中","","SO.20260521002","2026-05-19",""],
+        ["香港企业服务","年审",6300,6300,"执行中","","SO.20260527002","2026-05-19",""],
+        ["香港投资移民","投资移民",178000,178000,"执行中","","SO.20260522002","2026-05-21",""],
+        ["香港优才移民","优才",36000,36000,"执行中","","SO.20260521004","2026-05-21",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260521005","2026-05-21",""],
+        ["香港签证项目","受养人办理",5000,5000,"执行中","","SO.20260522005","2026-05-22",""],
+        ["香港进修移民","硕士保录","",50000,"已获批","是","SO.20250901001","2026-05-26",""],
+        ["香港企业服务","注册",8800,8800,"执行中","","SO.20250211001","2026-05-26",""],
+        ["海外移民项目","瓦努阿图",1142706,"=17406+375100","执行中","","SO.20260525010","2026-05-26",""],
+        ["香港高才移民","高才A",16000,16000,"执行中","","SO.20260604003","2026-05-26",""],
+        ["香港投资移民","投资移民",198000,198000,"执行中","","SO.20260528002","2026-05-27",""],
+        ["香港高才移民","高才B",16000,16000,"执行中","","SO.20260529008","2026-05-27",""],
+        ["香港企业服务","注册",8800,8800,"执行中","","SO.20260528001","2026-05-27",""],
+        ["香港投资移民","投资移民",190000,100000,"执行中","","SO.20260529009","2026-05-28",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260529005","2026-05-29",""],
+        ["香港签证项目","专才续签",10000,10000,"执行中","","SO.20260529006","2026-05-29",""],
+        ["海外移民项目","土耳其","",344155,"执行中","","SO.20260507006","2026-05-26",""],
+        ["香港投资移民","投资移民",228000,228000,"执行中","","SO.20260602002","2026-05-29",""],
+        ["香港企业服务","年审",6300,6300,"执行中","","SO.20260529010","2026-05-29",""],
+        ["香港高才移民","高才A",16000,8000,"执行中","","SO.20260602001","2026-06-01",""],
+        ["海外移民项目","土耳其","",34416,"执行中","","SO.20260507006","2026-06-01",""],
+        ["香港投资移民","投资移民",198000,110000,"执行中","","SO.20260603004","2026-06-01",""],
+        ["香港高才移民","高才A",26000,26000,"执行中","","SO.20260603002","2026-06-02",""],
+        ["香港投资移民","投资移民",188000,188000,"执行中","","SO.20260602003","2026-06-02",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260602004","2026-06-02",""],
+        ["香港高才移民","高才A",36000,36000,"执行中","","SO.20260603001","2026-06-02",""],
+        ["香港企业服务","薪俸税",1200,1200,"执行中","","SO.20260527002","2026-06-03",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","SO.20260603003","2026-06-03",""],
+        ["香港企业服务","注册+开户",20800,20800,"执行中","","SO.20260603005","2026-06-03",""],
+        ["香港进修移民","硕士常规",38000,38000,"执行中","","#N/A","2026-06-03",""],
+        ["香港投资移民","投资移民",163000,163000,"执行中","","#N/A","2026-06-04",""],
+        ["香港企业服务","香港公司注销",3600,3600,"执行中","","SO.20250718003","2026-06-04",""],
+        ["香港企业服务","做账报税",23313,23313,"执行中","","","2026-06-04",""],
+        ["香港投资移民","投资移民",148000,148000,"执行中","","","2026-06-04",""],
+        ["香港投资移民","投资移民",183000,183000,"执行中","","","2026-06-04",""],
+        ["海外移民项目","土耳其",26109,26109,"执行中","","","2026-06-04",""],
+        ["香港投资移民","投资移民",153000,153000,"执行中","","","2026-06-05",""],
+        ["香港投资移民","投资移民","",101000,"执行中","是","","2026-06-05",""]
+    ];
+
+    // 收集子类明细：只统计新签合同（当年新签且合同金额>0）
+    // 返回每个子类的签约单数和这些新签合同对应的回款金额（不含往年合同回款）
+    function collectSubItemsNewSign(projectType, excludeMainService = null) {
+        const subMap = new Map();
+        for (let row of rawRows) {
+            let [proj, service, contractRaw, receivedRaw, status, isOld, contractNo, receivedDate, refundRaw] = row;
+            if (proj !== projectType) continue;
+            if (excludeMainService && service === excludeMainService) continue;
+            let contractAmt = evaluateFormula(contractRaw);
+            let received = evaluateFormula(receivedRaw);
+            if (isNaN(contractAmt)) contractAmt = 0;
+            if (isNaN(received)) received = 0;
+            const isTail = (isOld === "是");
+            // 仅当年新签且合同金额>0
+            if (!isTail && contractAmt > 0) {
+                if (!subMap.has(service)) {
+                    subMap.set(service, { service, signCount: 0, receivedAmount: 0 });
+                }
+                let sub = subMap.get(service);
+                sub.signCount += 1;
+                sub.receivedAmount += received;   // 累加该新签合同的回款金额
+            }
+        }
+        return Array.from(subMap.values()).filter(s => s.signCount > 0);
+    }
+
+    const overseasSubs = collectSubItemsNewSign("海外移民项目");
+    const hkInvestmentSubs = collectSubItemsNewSign("香港投资移民", "投资移民");
+
+    // 聚合主项目数据
+    const projectStats = new Map();
+    for (let row of rawRows) {
+        let [proj, service, contractRaw, receivedRaw, status, isOld, contractNo, receivedDate, refundRaw] = row;
+        let contractAmt = evaluateFormula(contractRaw);
+        if (isNaN(contractAmt)) contractAmt = 0;
+        let received = evaluateFormula(receivedRaw);
+        if (isNaN(received)) received = 0;
+        let refund = evaluateFormula(refundRaw);
+        if (isNaN(refund)) refund = 0;
+
+        let displayType = proj;
+        if (proj === "海外移民项目" || proj === "香港投资移民") displayType = proj;
+
+        if (!projectStats.has(displayType)) {
+            projectStats.set(displayType, {
+                newSignCount: 0,
+                newContractSum: 0,
+                totalReceived: 0,
+                tailReceived: 0,
+                refundAmount: 0,
+                refundCount: 0,
+                approvedCount: 0
+            });
+        }
+        const stat = projectStats.get(displayType);
+        stat.totalReceived += received;
+        stat.refundAmount += refund;
+        const isTail = (isOld === "是");
+        if (isTail) {
+            stat.tailReceived += received;
+        } else {
+            if (contractAmt > 0) {
+                if (proj === "香港投资移民" && service !== "投资移民") {
+                    stat.newContractSum += contractAmt;
+                } else {
+                    stat.newSignCount += 1;
+                    stat.newContractSum += contractAmt;
+                }
+            }
+        }
+        if (status === "已退款") stat.refundCount += 1;
+        if (status === "已获批") {
+            if (proj === "香港投资移民" && service !== "投资移民") {
+                // 子类不影响主项目获批数
+            } else {
+                stat.approvedCount += 1;
+            }
+        }
+    }
+
+    // 总回款 & 进度
+    let grandTotal = 0;
+    const allTypes = Array.from(projectStats.keys()).sort();
+    const displayData = [];
+    for (let type of allTypes) {
+        const s = projectStats.get(type);
+        grandTotal += s.totalReceived;
+        displayData.push({
+            type,
+            newSignCount: s.newSignCount,
+            newContractAmount: s.newContractSum,
+            totalReceived: s.totalReceived,
+            tailReceived: s.tailReceived,
+            refundAmount: s.refundAmount,
+            refundCount: s.refundCount,
+            approvedCount: s.approvedCount
+        });
+    }
+    const TARGET = 25000000;
+    const percent = (grandTotal / TARGET) * 100;
+    document.getElementById('totalReceivedDisplay').innerHTML = `¥ ${grandTotal.toLocaleString()}`;
+    document.getElementById('progressFill').style.width = `${Math.min(percent, 100)}%`;
+    document.getElementById('completionRate').innerHTML = `${percent.toFixed(2)}%`;
+
+    function renderCard(item) {
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <div class="project-name"><i class="fas fa-folder-open"></i> ${item.type}</div>
+                    <div class="badge-count">新签 ${item.newSignCount} 单</div>
+                </div>
+                <div class="stats-body">
+                    <div class="stat-row"><span class="stat-label">当年签约金额</span><span class="stat-number">¥ ${item.newContractAmount.toLocaleString()}</span></div>
+                    <div class="stat-row"><span class="stat-label">总回款金额</span><span class="stat-number">¥ ${item.totalReceived.toLocaleString()}</span></div>
+                    <div class="stat-row"><span class="stat-label">往年合同回款</span><span class="stat-number">¥ ${item.tailReceived.toLocaleString()}</span></div>
+                    <div class="stat-row"><span class="stat-label">退款金额</span><span class="stat-number">¥ ${item.refundAmount.toLocaleString()}</span></div>
+                    <div class="refund-approved">
+                        <span class="refund">退单 ${item.refundCount}</span>
+                        <span class="approved">获批 ${item.approvedCount}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderSubDetailNewSign(subData, title) {
+        if (!subData || subData.length === 0) return '';
+        return `
+            <div class="sub-detail">
+                <div class="sub-title"><i class="fas fa-th-large"></i> ${title}</div>
+                <div class="sub-card-grid">
+                    ${subData.map(sub => `
+                        <div class="sub-item-card">
+                            <div class="sub-item-name">${sub.service}</div>
+                            <div class="sub-item-stats">
+                                <span>新签单数</span>
+                                <span>${sub.signCount}</span>
+                            </div>
+                            <div class="sub-item-stats">
+                                <span>回款金额</span>
+                                <span>¥ ${sub.receivedAmount.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // 海外移民块
+    const overseasItem = displayData.find(d => d.type === "海外移民项目");
+    if (overseasItem) {
+        document.getElementById('overseasBlock').innerHTML = `
+            ${renderCard(overseasItem)}
+            ${renderSubDetailNewSign(overseasSubs, "海外移民子类明细（新签单数 & 回款）")}
+        `;
+    }
+
+    // 香港投资移民块
+    const hkInvestmentItem = displayData.find(d => d.type === "香港投资移民");
+    if (hkInvestmentItem) {
+        document.getElementById('hkInvestmentBlock').innerHTML = `
+            ${renderCard(hkInvestmentItem)}
+            ${renderSubDetailNewSign(hkInvestmentSubs, "香港投资移民子类明细（新签单数 & 回款）")}
+        `;
+    }
+
+    // 其他项目网格
+    const otherItems = displayData.filter(d => d.type !== "海外移民项目" && d.type !== "香港投资移民");
+    const cardsContainer = document.getElementById('cardsContainer');
+    cardsContainer.innerHTML = otherItems.map(item => renderCard(item)).join('');
+
+    // 明细表
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = displayData.map(item => `
+        <tr>
+            <td><strong>${item.type}</strong></td>
+            <td>${item.newSignCount}</td>
+            <td class="stat-number">¥ ${item.newContractAmount.toLocaleString()}</td>
+            <td class="stat-number">¥ ${item.totalReceived.toLocaleString()}</td>
+            <td class="stat-number">¥ ${item.tailReceived.toLocaleString()}</td>
+            <td class="stat-number">¥ ${item.refundAmount.toLocaleString()}</td>
+            <td>${item.refundCount}</td>
+            <td>${item.approvedCount}</td>
+        </tr>
+    `).join('');
+</script>
+</body>
+</html>
